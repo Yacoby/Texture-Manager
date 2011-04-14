@@ -52,7 +52,7 @@ MD5_FILE    = os.path.join(PATH_FROM_WORKING_DIR, "regex.md5")
 
 
 #DO NOT PUT THIS AS THE ROOT OF THE DRIVE. IT WILL WIPE ALL DATA
-INSTALL_DIR = PATH_FROM_WORKING_DIR + "Install\\"
+INSTALL_DIR = os.path.join(PATH_FROM_WORKING_DIR, "Install")
 
 HOLDING_DIR = os.path.join(TM_DATA_DIR,"Mods")
 REGEX_FILE  = os.path.join(TM_DATA_DIR, "Data", "Regex.ini")
@@ -479,8 +479,8 @@ class MainForm(wx.Dialog):
         print "\nGening File List..."
         files = self.fillExportData()
         for f in files.get():
-            sFromPath = HOLDING_DIR + files.get()[f] + "\\" + f
-            sToPath = DATA_FILES + f
+            sFromPath = os.path.join(HOLDING_DIR, files.get()[f], f)
+            sToPath   = os.path.join(DATA_FILES, f)
 
             head, tail = os.path.split(sToPath)
 
@@ -501,11 +501,11 @@ class MainForm(wx.Dialog):
         print "Removing Files:"
         for f in files.get():
             if files.get()[f] == mod:
-                print "-- " + DATA_FILES + f
-                os.remove(DATA_FILES + f)
+                print "-- " + os.path.join(DATA_FILES, f)
+                os.remove(os.path.join(DATA_FILES, f))
 
         #now need to remove all data relating to the mod
-        shutil.rmtree(HOLDING_DIR + files.get()[f])
+        shutil.rmtree(os.path.join(HOLDING_DIR, mod))
 
         del data.mMod[mod]
 
@@ -655,7 +655,7 @@ class MainForm(wx.Dialog):
 
         #copy
         print "Copying files..."
-        shutil.copytree(INSTALL_DIR, HOLDING_DIR + strVal)
+        shutil.copytree(INSTALL_DIR, os.path.join(HOLDING_DIR, strVal))
 
         #del old
         print "Remvoing..."
