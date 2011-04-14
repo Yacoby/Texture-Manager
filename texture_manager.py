@@ -26,6 +26,7 @@
 #if anyone can recomened a good IDE, please say.
 
 import re
+import pickle
 import struct
 import os
 import wx
@@ -325,141 +326,18 @@ class Data:
         #--Write header---#
         # (file ver Major - Minor )
         ofs = file(fileName,"wb")
-
-        ofs.write(struct.pack("=ii", 0, 1))
-                    
-        for m in self.mMod:
-            #record type
-            #print "MOD_"
-            ofs.write(struct.pack("4s", "MOD_"))
-                 
-            #NAME
-            ofs.write(struct.pack("i", len(m)))
-            ofs.write(struct.pack("%ds" % len(m), m))
-            #print "With Name: " + m
-
-            #num file records
-            ofs.write(struct.pack("i", len(self.mMod[m].mFile)))
-                 
-            for f in self.mMod[m].mFile:
-                #print " -- " + f
-                
-                #FILE
-                ofs.write(struct.pack("i", len(f)))
-                ofs.write(struct.pack("%ds" % len(f), f))
-
-                #fucking thing seems to switch type. Hacky fix
-                try:
-                    ofs.write(struct.pack("i", len(self.mMod[m].mFile[f].mArcType)))
-
-                    for a in self.mMod[m].mFile[f].mArcType:
-                        #print " ---- " + a
-                        #Arc ref
-                        ofs.write(struct.pack("i", len(a)))
-                        ofs.write(struct.pack("%ds" % len(a), a))
-                except:
-                    ofs.write(struct.pack("i", len(self.mMod[m].mFile[f])))
-
-                    for a in self.mMod[m].mFile[f]:
-                        #print " ---- " + a
-                        #Arc ref
-                        ofs.write(struct.pack("i", len(a)))
-                        ofs.write(struct.pack("%ds" % len(a), a))
-                
-
-                
-
-        for a in self.mArc:
-            #record type
-            ofs.write(struct.pack("4s", "ARC_"))
-
-            ofs.write(struct.pack("i", len(a)))
-            ofs.write(struct.pack("%ds" % len(a), a))
-
-            #num records, both enabled and disabled
-            ofs.write(struct.pack("i", len(self.mArc[a].mModOrder) + len(self.mArc[a].mModOrderDisabled)))                
-
-            for m in self.mArc[a].mModOrder:
-                ofs.write(struct.pack("c", "e")) #enabled
-                ofs.write(struct.pack("i", len(m)))
-                ofs.write(struct.pack("%ds" % len(m), m))
-
-            for m in self.mArc[a].mModOrderDisabled:
-                ofs.write(struct.pack("c", "d")) #disabled
-                ofs.write(struct.pack("i", len(m)))
-                ofs.write(struct.pack("%ds" % len(m), m))
-        
+        pickle.dump(self.mMod, ofs)
+        pickle.dump(self.mArc, ofs)
+        ofs.close()
 
     #-----------------------------------------------------------------------
     def load(self, fileName):
         if os.path.exists(fileName) == False:
             return
-
-        print "\nLoading Data..."
-        
         ifs = open(fileName, "rb")
-
-        #assuming int is len 4?
-        verAll = ifs.read(8)
-        ver1, ver2 = struct.unpack("ii", verAll)
-
-        while True:
-
-            rec = ifs.read(4)
-
-            if len(rec) < 4 :
-                break;
-
-            if rec == "MOD_":
-                #print "MOD_ Record"
-                sLen = struct.unpack("i", ifs.read(4))[0]
-                name = struct.unpack("%ds" % sLen, ifs.read(sLen))[0]
-
-                #print "With name: " + name
-
-                self.mMod[name] = Mod(name)
-
-                numFRec = struct.unpack("i", ifs.read(4))[0]
-                
-               # print "--There are %d file sub records" % numFRec
-                
-                for f in range(numFRec):
-                    sLen = struct.unpack("i", ifs.read(4))[0]
-                    fileName = struct.unpack("%ds" % sLen, ifs.read(sLen))[0]
-
-                    arc = []
-
-                    numARec = struct.unpack("i", ifs.read(4))[0]
-                    #print "---There are %d arc sub records" % numARec
-                    for a in range(numARec):
-                        sLen = struct.unpack("i", ifs.read(4))[0]
-                        arc.append(struct.unpack("%ds" % sLen, ifs.read(sLen))[0])
-
-                    self.mMod[name].addFileArcType(fileName, arc)
-
-
-            
-
-            if rec == "ARC_":
-                
-                #print "ARC_ Record"
-                sLen = struct.unpack("i", ifs.read(4))[0]
-                name = struct.unpack("%ds" % sLen, ifs.read(sLen))[0]
-
-                #print "With name: " + name
-
-                self.mArc[name] = Arc()
-                
-                numRec = struct.unpack("i", ifs.read(4))[0]
-
-                for i in range(numRec):
-                    isEnabled = struct.unpack("c", ifs.read(1))[0]
-                    sLen = struct.unpack("i", ifs.read(4))[0]
-                    if isEnabled == "d":
-                        self.mArc[name].addDisabledMod(struct.unpack("%ds" % sLen, ifs.read(sLen))[0])
-                    else: #has to be enabled
-                        self.mArc[name].addMod(struct.unpack("%ds" % sLen, ifs.read(sLen))[0])
-            
+        self.mMod = pickle.load(ifs)
+        self.mArc = pickle.load(ifs)
+        ifs.close()
 
     #-----------------------------------------------------------------------
     def addMod(self, modName, files):
